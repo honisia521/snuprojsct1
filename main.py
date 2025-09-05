@@ -31,14 +31,27 @@ df_games['combined_features'] = df_games['combined_features'].fillna('') # NaN �
 tfidf = TfidfVectorizer(stop_words=None) # 한국어 처리이므로 stop_words는 None
 tfidf_matrix = tfidf.fit_transform(df_games['combined_features'])
 cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
-indices = pd.Series(df_games.index, index=df_games.index).drop_duplicates()
+
+# 수정: indices 생성 방식을 더 명확하게 변경
+indices = pd.Series(df_games.index.to_list(), index=df_games.index).drop_duplicates()
 
 # 수정: get_recommendations_by_game 함수 내에서 에러 처리 강화
 def get_recommendations_by_game(title, cosine_sim=cosine_sim, df=df_games, indices=indices):
-    if title not in indices: # '--선택--' 이거나 유효하지 않은 제목일 경우
+    if title not in indices:
         return pd.DataFrame() # 빈 데이터프레임 반환
 
-    idx = indices[title]
+    # idx가 Series 형태로 반환될 가능성을 방지하고 첫 번째(유일한) 값을 가져옴
+    idx_series = indices[title]
+    if isinstance(idx_series, pd.Series):
+        idx = idx_series.iloc[0] # Series라면 첫 번째 값 사용
+    else:
+        idx = idx_series # 단일 값이라면 그대로 사용
+
+    # idx가 정수인지 확인
+    if not isinstance(idx, (int, float)): # float도 일단 허용 (정수로 변환 가능성)
+        return pd.DataFrame()
+    idx = int(idx) # 정수로 강제 변환
+
     # idx가 유효한 인덱스 범위 내에 있는지 다시 한번 확인
     if not (0 <= idx < len(cosine_sim)):
         return pd.DataFrame()
@@ -47,15 +60,12 @@ def get_recommendations_by_game(title, cosine_sim=cosine_sim, df=df_games, indic
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
     sim_scores = sim_scores[1:7]  # 자기 자신 제외하고 상위 6개 추천
 
-    # 추천된 게임이 없는 경우 (예: 데이터가 너무 적거나 유사도가 너무 낮을 때)
+    # 추천된 게임이 없는 경우
     if not sim_scores:
         return pd.DataFrame()
 
     game_indices = [i[0] for i in sim_scores]
     return df.iloc[game_indices]
-
-# '키워드로 게임 찾기' 기능은 임시로 삭제 (추후 독립 페이지로 이동)
-# def get_recommendations_by_keywords(...): ... (삭제됨)
 
 
 # --- 3. Streamlit 앱 구성 ---
@@ -91,10 +101,9 @@ with col_sidebar: # 사이드바는 오른쪽에 배치
     st.header("🎯 추천 필터 및 방식")
     st.markdown("---")
 
-    # 수정: 추천 방식 선택 옵션 변경
     recommendation_mode = st.radio(
         "어떤 방식으로 추천받으시겠어요?",
-        ("필터로 게임 탐색", "이 게임과 비슷한 게임 찾기"), # '키워드로 게임 찾기' 옵션 제거
+        ("필터로 게임 탐색", "이 게임과 비슷한 게임 찾기"),
         index=0 # 기본값 설정
     )
     st.markdown("---")
@@ -134,7 +143,6 @@ with col_sidebar: # 사이드바는 오른쪽에 배치
         if selected_game_for_recommendation != '--선택--':
             recommended_games_df = get_recommendations_by_game(selected_game_for_recommendation)
         else:
-            # '--선택--'일 때는 빈 DataFrame을 할당하여 오류 방지
             recommended_games_df = pd.DataFrame()
 
 
@@ -148,19 +156,16 @@ with col_main: # 메인 콘텐츠 영역
     else: # "이 게임과 비슷한 게임 찾기"
         display_games = recommended_games_df
         if display_games.empty:
-            # 수정: 메시지 변경 (키워드 추천 기능 제거 반영)
             st.info("좋아하는 게임을 선택하시면 비슷한 게임을 추천해 드립니다.")
 
 
     # 게임 카드 형식으로 결과 표시
     if not display_games.empty:
-        # 결과를 2열로 분할하여 표시 (모바일에서는 1열)
         display_cols = st.columns(2)
         for i, (game_name, game_info) in enumerate(display_games.iterrows()):
             with display_cols[i % 2]:
                 st.markdown(f'<div class="game-card">', unsafe_allow_html=True)
                 st.markdown(f'<h3 class="game-title">{game_name}</h3>', unsafe_allow_html=True)
-                # 이미지 추가 (예시, 실제 이미지 URL이 필요)
                 # st.image(f"images/{game_name}.jpg", width=150) # 이미지 파일이 있다면
                 st.write(f"**장르:** {game_info['장르']}")
                 st.write(f"**난이도:** {game_info['난이도']}")
