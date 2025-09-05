@@ -3,13 +3,6 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
-# ... (나머지 코드 그대로) ...
-
-import streamlit as st
-import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel
-
 # --- 1. 게임 데이터 준비 (현재 코드의 상세 정보 + 추천을 위한 태그 확장) ---
 games = {
     "리그 오브 레전드": {"장르": "AOS", "난이도": "중", "플레이어 수": "멀티", "평점": 4.5, "설명": "5대5 팀 전략 게임. 다양한 챔피언과 전략으로 승리하세요.", "태그": "팀 전략, 경쟁, AOS, 무료, MOBA, e스포츠"},
@@ -40,28 +33,29 @@ tfidf_matrix = tfidf.fit_transform(df_games['combined_features'])
 cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
 indices = pd.Series(df_games.index, index=df_games.index).drop_duplicates()
 
+# 수정: get_recommendations_by_game 함수 내에서 에러 처리 강화
 def get_recommendations_by_game(title, cosine_sim=cosine_sim, df=df_games, indices=indices):
-    if title not in indices:
-        return []
+    if title not in indices: # '--선택--' 이거나 유효하지 않은 제목일 경우
+        return pd.DataFrame() # 빈 데이터프레임 반환
+
     idx = indices[title]
+    # idx가 유효한 인덱스 범위 내에 있는지 다시 한번 확인
+    if not (0 <= idx < len(cosine_sim)):
+        return pd.DataFrame()
+
     sim_scores = list(enumerate(cosine_sim[idx]))
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
     sim_scores = sim_scores[1:7]  # 자기 자신 제외하고 상위 6개 추천
+
+    # 추천된 게임이 없는 경우 (예: 데이터가 너무 적거나 유사도가 너무 낮을 때)
+    if not sim_scores:
+        return pd.DataFrame()
+
     game_indices = [i[0] for i in sim_scores]
     return df.iloc[game_indices]
 
-def get_recommendations_by_keywords(keywords, cosine_sim=cosine_sim, df=df_games, tfidf_vectorizer=tfidf):
-    if not keywords.strip():
-        return pd.DataFrame() # 빈 데이터프레임 반환
-
-    user_input_tfidf = tfidf_vectorizer.transform([keywords])
-    user_cosine_sim = linear_kernel(user_input_tfidf, tfidf_matrix)
-
-    sim_scores = list(enumerate(user_cosine_sim[0]))
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-    sim_scores = sim_scores[0:6] # 상위 6개 추천
-    game_indices = [i[0] for i in sim_scores]
-    return df.iloc[game_indices]
+# '키워드로 게임 찾기' 기능은 임시로 삭제 (추후 독립 페이지로 이동)
+# def get_recommendations_by_keywords(...): ... (삭제됨)
 
 
 # --- 3. Streamlit 앱 구성 ---
@@ -97,10 +91,10 @@ with col_sidebar: # 사이드바는 오른쪽에 배치
     st.header("🎯 추천 필터 및 방식")
     st.markdown("---")
 
-    # 추천 방식 선택
+    # 수정: 추천 방식 선택 옵션 변경
     recommendation_mode = st.radio(
         "어떤 방식으로 추천받으시겠어요?",
-        ("필터로 게임 탐색", "이 게임과 비슷한 게임 찾기", "키워드로 게임 찾기"),
+        ("필터로 게임 탐색", "이 게임과 비슷한 게임 찾기"), # '키워드로 게임 찾기' 옵션 제거
         index=0 # 기본값 설정
     )
     st.markdown("---")
@@ -137,21 +131,10 @@ with col_sidebar: # 사이드바는 오른쪽에 배치
             ['--선택--', *sorted(df_games.index.tolist())],
             key="rec_game_select"
         )
-        if selected_game_for_recommendation != '--선택__':
+        if selected_game_for_recommendation != '--선택--':
             recommended_games_df = get_recommendations_by_game(selected_game_for_recommendation)
         else:
-            recommended_games_df = pd.DataFrame()
-
-    elif recommendation_mode == "키워드로 게임 찾기":
-        st.subheader("💡 키워드 추천")
-        keywords_input = st.text_input("원하는 키워드를 입력하세요 (예: 오픈월드, 협동, 스토리)", key="rec_keywords")
-        if st.button("키워드로 추천받기", key="btn_keywords_rec"):
-            if keywords_input:
-                recommended_games_df = get_recommendations_by_keywords(keywords_input)
-            else:
-                st.warning("키워드를 입력해주세요!")
-                recommended_games_df = pd.DataFrame()
-        else:
+            # '--선택--'일 때는 빈 DataFrame을 할당하여 오류 방지
             recommended_games_df = pd.DataFrame()
 
 
@@ -162,13 +145,12 @@ with col_main: # 메인 콘텐츠 영역
         display_games = filtered_games_by_filter
         if display_games.empty:
             st.info("선택한 조건에 맞는 게임이 없습니다. 필터를 조정해 보세요.")
-    else: # "이 게임과 비슷한 게임 찾기" 또는 "키워드로 게임 찾기"
+    else: # "이 게임과 비슷한 게임 찾기"
         display_games = recommended_games_df
         if display_games.empty:
-            if recommendation_mode == "이 게임과 비슷한 게임 찾기":
-                st.info("좋아하는 게임을 선택하시면 비슷한 게임을 추천해 드립니다.")
-            elif recommendation_mode == "키워드로 게임 찾기":
-                st.info("키워드를 입력하고 '키워드로 추천받기' 버튼을 눌러보세요.")
+            # 수정: 메시지 변경 (키워드 추천 기능 제거 반영)
+            st.info("좋아하는 게임을 선택하시면 비슷한 게임을 추천해 드립니다.")
+
 
     # 게임 카드 형식으로 결과 표시
     if not display_games.empty:
