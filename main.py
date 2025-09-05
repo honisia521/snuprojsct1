@@ -3,6 +3,13 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
+# ... (나머지 코드 그대로) ...
+
+import streamlit as st
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+
 # --- 1. 게임 데이터 준비 (현재 코드의 상세 정보 + 추천을 위한 태그 확장) ---
 games = {
     "리그 오브 레전드": {"장르": "AOS", "난이도": "중", "플레이어 수": "멀티", "평점": 4.5, "설명": "5대5 팀 전략 게임. 다양한 챔피언과 전략으로 승리하세요.", "태그": "팀 전략, 경쟁, AOS, 무료, MOBA, e스포츠"},
