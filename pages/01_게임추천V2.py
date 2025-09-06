@@ -19,7 +19,7 @@ df_games.index.name = '게임 이름'
 
 st.set_page_config(layout="wide", page_title="무료 게임 추천")
 
-st.title("🎮 AI 없이도 동작하는 게임 추천 (무료)")
+st.title("🎮 게임 추천")
 st.write("좋아하는 게임이나 스타일을 선택하면 유사한 게임을 추천해드립니다!")
 
 # --- 추천 방식 선택 ---
