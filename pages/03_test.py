@@ -133,3 +133,59 @@ def get_recommendations(game_name, cosine_sim_matrix, df, top_n=5):
         return None
 
     idx = indices[game_name]
+    sim_scores = list(enumerate(cosine_sim_matrix[idx]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+
+    # 자기 자신을 제외하고 가장 유사한 top_n 게임 추출
+    game_indices = [i[0] for i in sim_scores if i[0] != idx][:top_n]
+    return df.iloc[game_indices]
+
+# --- 4. Streamlit UI ---
+st.set_page_config(layout="wide", page_title="TF-IDF 기반 게임 추천")
+st.title("🎮 TF-IDF 기반 게임 추천기")
+st.markdown("""
+<style>
+    .game-card {
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+        background-color: #f9f9f9;
+    }
+    .game-title {
+        color: #FF4B4B;
+        font-size: 1.2em;
+        font-weight: bold;
+    }
+</style>
+""", unsafe_allow_html=True)
+st.write("좋아하는 게임을 선택하여 비슷한 게임을 추천받으세요!")
+
+# 사용자 입력
+selected_game = st.selectbox(
+    "좋아하는 게임을 선택하세요:",
+    ['--선택--', *sorted(df_games.index.tolist())],
+    key="game_select"
+)
+
+if selected_game != '--선택--':
+    st.info(f"'{selected_game}'와(과) 비슷한 게임을 추천해 드릴게요!")
+    
+    with st.spinner("유사 게임을 찾는 중입니다..."):
+        recommended_games = get_recommendations(selected_game, cosine_sim, df_games, top_n=3)
+        
+    if recommended_games is not None and not recommended_games.empty:
+        st.subheader("💡 추천 게임")
+        
+        display_cols = st.columns(3)
+        for i, (game_name, game_info) in enumerate(recommended_games.iterrows()):
+            with display_cols[i % 3]:
+                st.markdown(f'<div class="game-card">', unsafe_allow_html=True)
+                st.markdown(f'<h3 class="game-title">{game_name}</h3>', unsafe_allow_html=True)
+                st.write(f"**장르:** {game_info['장르']}")
+                st.write(f"**평점:** {game_info['평점']} / 5.0")
+                st.markdown(f"**설명:** {game_info['설명']}")
+                st.markdown(f'</div>', unsafe_allow_html=True)
+    else:
+        st.warning("추천할 게임을 찾을 수 없습니다. 다른 게임을 선택해 주세요.")
