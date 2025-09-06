@@ -22,27 +22,33 @@ st.set_page_config(layout="wide", page_title="무료 게임 추천")
 st.title("🎮 AI 없이도 동작하는 게임 추천 (무료)")
 st.write("좋아하는 게임이나 스타일을 선택하면 유사한 게임을 추천해드립니다!")
 
-# --- 추천 방식 ---
+# --- 추천 방식 선택 ---
 recommendation_type = st.radio("추천 방식 선택:", ("선호 게임 선택", "자유로운 텍스트 설명"), index=0)
 
+# --- 추천 함수 ---
 def recommend_by_game(selected_game, n=3):
-    # 같은 장르 게임 중 추천 (본인 게임 제외)
     genre = df_games.loc[selected_game, "장르"]
     similar = df_games[df_games["장르"] == genre].drop(selected_game, errors='ignore')
+    if similar.empty:
+        # 같은 장르가 없으면 평점 상위 n개 추천
+        similar = df_games.drop(selected_game).sort_values("평점", ascending=False).head(n)
     return similar.head(n)
 
 def recommend_by_text(user_text, n=3):
-    # 간단 키워드 매칭으로 추천
     keywords = user_text.lower().split()
     scores = {}
     for game, info in games.items():
         text = f"{game} {info['장르']} {info['설명']}".lower()
         score = sum(text.count(k) for k in keywords)
-        if score > 0:
-            scores[game] = score
+        scores[game] = score
     sorted_games = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    recommended = [df_games.loc[g] for g, s in sorted_games[:n]]
-    return pd.DataFrame(recommended)
+    recommended_names = [g for g, s in sorted_games[:n]]
+    # 점수 0이면 평점 상위 n개로 대체
+    if all(scores[g]==0 for g in recommended_names):
+        recommended = df_games.sort_values("평점", ascending=False).head(n)
+    else:
+        recommended = df_games.loc[recommended_names]
+    return recommended
 
 # --- 처리 ---
 if recommendation_type == "선호 게임 선택":
