@@ -7,7 +7,7 @@ import time # 로딩 애니메이션을 위해 추가
 
 # --- 1. Google AI Studio API Key 설정 ---
 # 제공해주신 API 키가 여기에 바로 적용됩니다.
-GEMINI_API_KEY = "AIzaSyDXCnqOT3WchGYEwV7DVx4MR-IVG0dzs9U"
+GEMINI_API_KEY = "AIzaSyDdjQmz-gdpphTfbMRG1ATBSQ7SO7W93IE"
 
 # API 키가 설정되었는지 확인 (이 부분은 이제 항상 통과됩니다)
 if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
