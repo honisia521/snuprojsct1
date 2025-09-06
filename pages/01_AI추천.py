@@ -1,14 +1,8 @@
-import streamlit as st
-import google.generativeai as genai
+# 수정 전
+# GEMINI_API_KEY = st.secrets["AIzaSyDdjQmz-gdpphTfbMRG1ATBSQ7SO7W93IE"]
 
-# st.secrets를 사용해 secrets.toml 파일에서 API 키를 가져옵니다.
-GEMINI_API_KEY = st.secrets["AIzaSyDdjQmz-gdpphTfbMRG1ATBSQ7SO7W93IE"]
-
-# 안전하게 가져온 키로 API를 설정합니다.
-genai.configure(api_key=GEMINI_API_KEY)
-
-# 나머지 여러분의 코드가 여기에 이어집니다...
-# ...
+# 수정 후
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
 # pages/gemini_recommender.py
 
