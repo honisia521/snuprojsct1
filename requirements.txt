@@ -3,3 +3,6 @@ pandas
 scikit-learn
 google-generativeai
 elasticsearch
+streamlit
+openai>=1.0.0
+pandas
