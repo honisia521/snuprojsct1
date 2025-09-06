@@ -3,71 +3,58 @@ import pandas as pd
 from elasticsearch import Elasticsearch
 import time
 
-# Elasticsearch 클라이언트 설정
-# Streamlit Cloud에서 배포 시, .streamlit/secrets.toml 파일에 설정 필요
+# --- 1. Elasticsearch 연결 ---
+# Streamlit Cloud 배포 시 secrets.toml에서 정보를 가져오고,
+# 로컬 실행 시 localhost로 연결을 시도합니다.
 try:
-    es_host = st.secrets["ELASTICSEARCH_HOST"]
-    es_user = st.secrets["ELASTICSEARCH_USER"]
-    es_password = st.secrets["ELASTICSEARCH_PASSWORD"]
-    client = Elasticsearch(
-        es_host,
-        basic_auth=(es_user, es_password)
-    )
+    if st.secrets["ELASTICSEARCH_HOST"]:
+        client = Elasticsearch(
+            st.secrets["ELASTICSEARCH_HOST"],
+            basic_auth=(st.secrets["ELASTICSEARCH_USER"], st.secrets["ELASTICSEARCH_PASSWORD"])
+        )
+        is_local = False
+    else:
+        # secrets.toml에 키는 있지만 값이 비어있을 경우
+        client = Elasticsearch("http://localhost:9200")
+        is_local = True
 except (KeyError, FileNotFoundError):
-    st.info("로컬에서 실행합니다. Elasticsearch 연결 정보를 .streamlit/secrets.toml에 설정해 주세요.")
+    # secrets.toml 파일 자체가 없을 경우
     client = Elasticsearch("http://localhost:9200")
+    is_local = True
 
-# 연결 확인
+# 연결 상태 확인
 if not client.ping():
     st.error("Elasticsearch에 연결할 수 없습니다. 서버가 실행 중인지 확인해 주세요.")
+    if is_local:
+        st.warning("로컬에서 실행하려면 Elasticsearch를 먼저 실행해야 합니다.")
     st.stop()
 
-# --- 1. 앱 구성 ---
+# --- 2. 앱 구성 ---
 st.set_page_config(layout="wide", page_title="Elasticsearch 기반 게임 추천")
-
 st.title("🔍 Elasticsearch 기반 게임 추천기")
-st.markdown("""
-<style>
-    .game-card {
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
-        background-color: #f9f9f9;
-    }
-    .game-title {
-        color: #FF4B4B;
-        font-size: 1.2em;
-        font-weight: bold;
-    }
-</style>
-""", unsafe_allow_html=True)
 st.write("원하는 키워드를 입력하여 게임을 추천받으세요!")
 
-# --- 2. 검색 기능 ---
-search_query = st.text_input("게임 이름, 장르, 설명 등으로 검색해보세요 (예: RPG, 오픈월드, 스토리)", key="search_bar")
+# --- 3. 검색 기능 ---
+search_query = st.text_input("게임 이름, 장르, 설명 등으로 검색해보세요", key="search_bar")
 
 if st.button("검색하기", key="search_button"):
     if search_query:
         with st.spinner("Elasticsearch에서 게임을 검색 중입니다..."):
             try:
-                # Elasticsearch 검색 쿼리
+                # Elasticsearch 검색 쿼리 (multi_match를 사용해 여러 필드에서 검색)
                 query_body = {
                     "query": {
                         "multi_match": {
                             "query": search_query,
-                            "fields": ["게임 이름^2", "장르^1.5", "설명", "태그"], # 가중치 설정
-                            "fuzziness": "AUTO", # 오타 허용
+                            "fields": ["게임 이름^2", "장르^1.5", "설명", "태그"],
+                            "fuzziness": "AUTO",
                             "operator": "or"
                         }
                     }
                 }
                 
-                # Elasticsearch 검색 API 호출
                 res = client.search(index="games", body=query_body, size=6)
                 
-                # 검색 결과 처리
                 hits = res['hits']['hits']
                 if hits:
                     st.subheader("💡 검색 결과")
