@@ -1,9 +1,5 @@
 streamlit
 pandas
 scikit-learn
-
-
-pandas
-scikit-learn
 google-generativeai
 elasticsearch
