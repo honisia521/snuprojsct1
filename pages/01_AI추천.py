@@ -1,8 +1,11 @@
-# 수정 전
-# GEMINI_API_KEY = st.secrets["AIzaSyDdjQmz-gdpphTfbMRG1ATBSQ7SO7W93IE"]
+# /mount/src/snuprojsct1/pages/01_AI추천.py
 
-# 수정 후
+# 이 줄이 코드의 맨 위에 있어야 합니다.
+import streamlit as st 
+
+# 이제 이 줄이 올바르게 작동할 겁니다.
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+...
 
 # pages/gemini_recommender.py
 
