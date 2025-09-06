@@ -1,15 +1,5 @@
 import streamlit as st
 import pandas as pd
-from openai import OpenAI
-import time
-
-# --- OpenAI 클라이언트 초기화 ---
-api_key = st.secrets.get("OPENAI_API_KEY")
-if not api_key:
-    st.error("OPENAI_API_KEY가 설정되지 않았습니다! Streamlit Secrets 확인 필요")
-    st.stop()
-
-client = OpenAI(api_key=api_key)
 
 # --- 샘플 게임 데이터 ---
 games = {
@@ -23,68 +13,51 @@ games = {
     "발로란트": {"장르": "FPS", "난이도": "상", "플레이어 수": "멀티", "평점": 4.2, "설명": "정교한 총격전과 요원 스킬을 활용하는 전략 FPS."},
     "디아블로 4": {"장르": "액션 RPG", "난이도": "중", "플레이어 수": "싱글/멀티", "평점": 4.0, "설명": "어두운 판타지 세계에서 악마를 사냥하는 핵앤슬래시 RPG."}
 }
+
 df_games = pd.DataFrame.from_dict(games, orient='index')
 df_games.index.name = '게임 이름'
 
-st.set_page_config(layout="wide", page_title="AI 기반 게임 추천 (OpenAI)")
+st.set_page_config(layout="wide", page_title="무료 게임 추천")
 
-st.title("🎮 AI 기반 게임 추천 (OpenAI)")
-st.write("좋아하는 게임이나 원하는 스타일을 입력하면 OpenAI가 추천해드립니다!")
+st.title("🎮 AI 없이도 동작하는 게임 추천 (무료)")
+st.write("좋아하는 게임이나 스타일을 선택하면 유사한 게임을 추천해드립니다!")
 
-# --- 사용자 입력 방식 선택 ---
-recommendation_type = st.radio(
-    "추천 방식 선택:",
-    ("선호 게임 선택", "자유로운 텍스트 설명"),
-    index=0
-)
+# --- 추천 방식 ---
+recommendation_type = st.radio("추천 방식 선택:", ("선호 게임 선택", "자유로운 텍스트 설명"), index=0)
 
-recommended_games = ""
+def recommend_by_game(selected_game, n=3):
+    # 같은 장르 게임 중 추천 (본인 게임 제외)
+    genre = df_games.loc[selected_game, "장르"]
+    similar = df_games[df_games["장르"] == genre].drop(selected_game, errors='ignore')
+    return similar.head(n)
 
-# --- 캐시된 추천 함수 ---
-@st.cache_data(show_spinner=False)
-def get_recommendation(prompt_text):
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # RateLimit 낮고 안정적
-            messages=[
-                {"role": "system", "content": "너는 유능한 게임 큐레이터야."},
-                {"role": "user", "content": prompt_text}
-            ],
-            max_tokens=500
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"⚠️ 추천 중 오류 발생: {e}"
+def recommend_by_text(user_text, n=3):
+    # 간단 키워드 매칭으로 추천
+    keywords = user_text.lower().split()
+    scores = {}
+    for game, info in games.items():
+        text = f"{game} {info['장르']} {info['설명']}".lower()
+        score = sum(text.count(k) for k in keywords)
+        if score > 0:
+            scores[game] = score
+    sorted_games = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    recommended = [df_games.loc[g] for g, s in sorted_games[:n]]
+    return pd.DataFrame(recommended)
 
-# --- 추천 처리 ---
+# --- 처리 ---
 if recommendation_type == "선호 게임 선택":
-    selected_game = st.selectbox(
-        "좋아하는 게임을 선택하세요:",
-        ['--선택--', *sorted(df_games.index.tolist())],
-        key="game_select"
-    )
-    if selected_game != '--선택--':
-        st.info(f"'{selected_game}'와 비슷한 게임을 추천해드릴게요!")
-        if st.button("AI 추천받기 (선호 게임)"):
-            prompt = f"'{selected_game}'와 비슷한 게임 3개를 추천해줘. 이름, 장르, 1~2문장 설명을 한국어로."
-            with st.spinner("추천 중..."):
-                recommended_games = get_recommendation(prompt)
-            st.subheader("💡 OpenAI 추천 결과")
-            st.markdown(recommended_games)
+    selected_game = st.selectbox("좋아하는 게임 선택:", ['--선택--', *sorted(df_games.index.tolist())])
+    if selected_game != '--선택--' and st.button("추천받기"):
+        result = recommend_by_game(selected_game)
+        st.subheader(f"💡 '{selected_game}'와 비슷한 게임 추천")
+        st.table(result)
 
 elif recommendation_type == "자유로운 텍스트 설명":
-    user_desc = st.text_area(
-        "원하는 게임 스타일을 설명해주세요:",
-        height=100,
-        key="text_input"
-    )
-    if st.button("AI 추천받기 (텍스트 설명)"):
+    user_desc = st.text_area("원하는 게임 스타일을 입력:", height=100)
+    if st.button("추천받기"):
         if user_desc.strip():
-            st.info(f"'{user_desc}' 스타일에 맞는 게임을 추천합니다!")
-            prompt = f"'{user_desc}' 스타일의 게임 3개를 추천해줘. 이름, 장르, 1~2문장 설명을 한국어로."
-            with st.spinner("추천 중..."):
-                recommended_games = get_recommendation(prompt)
-            st.subheader("💡 OpenAI 추천 결과")
-            st.markdown(recommended_games)
+            result = recommend_by_text(user_desc)
+            st.subheader(f"💡 '{user_desc}'에 맞는 게임 추천")
+            st.table(result)
         else:
             st.warning("게임 스타일을 입력해주세요!")
