@@ -1,11 +1,12 @@
 import streamlit as st
 import pandas as pd
 from openai import OpenAI
+import time
 
 # --- OpenAI 클라이언트 초기화 ---
 api_key = st.secrets.get("OPENAI_API_KEY")
 if not api_key:
-    st.error("OPENAI_API_KEY가 설정되지 않았습니다. Streamlit Secrets를 확인하세요.")
+    st.error("OPENAI_API_KEY가 설정되지 않았습니다! Streamlit Secrets 확인 필요")
     st.stop()
 
 client = OpenAI(api_key=api_key)
@@ -42,15 +43,18 @@ recommended_games = ""
 # --- 캐시된 추천 함수 ---
 @st.cache_data(show_spinner=False)
 def get_recommendation(prompt_text):
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "너는 유능한 게임 큐레이터야."},
-            {"role": "user", "content": prompt_text}
-        ],
-        max_tokens=500
-    )
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",  # RateLimit 낮고 안정적
+            messages=[
+                {"role": "system", "content": "너는 유능한 게임 큐레이터야."},
+                {"role": "user", "content": prompt_text}
+            ],
+            max_tokens=500
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"⚠️ 추천 중 오류 발생: {e}"
 
 # --- 추천 처리 ---
 if recommendation_type == "선호 게임 선택":
