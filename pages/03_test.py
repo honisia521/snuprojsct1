@@ -133,4 +133,3 @@ def get_recommendations(game_name, cosine_sim_matrix, df, top_n=5):
         return None
 
     idx = indices[game_name]
-ㅍ
