@@ -67,15 +67,14 @@ with col_sidebar:
     game_name = st.text_input("게임 이름 검색 (한글/영어)", placeholder="예: The Witcher 3 또는 The Witcher")
     st.caption("🚨 한글 검색 시 번역 오류로 인해 정확한 결과가 나오지 않을 수 있습니다.")
 
-    # IGDB의 장르 목록 (더 다양함)
     GENRES = ["Action", "Adventure", "Role-playing (RPG)", "Strategy", "Simulation", "Sports", "Shooter", "Puzzle", "Arcade"]
     selected_genres = st.multiselect("장르를 선택하세요:", GENRES)
 
-    # IGDB의 게임 모드 목록
     GAME_MODES = ["Single player", "Multiplayer", "Co-operative", "Massively Multiplayer Online (MMO)"]
     selected_modes = st.multiselect("플레이어 모드를 선택하세요:", GAME_MODES)
 
-    min_rating = st.slider("최소 평점 (100점 만점)", min_value=0, max_value=100, value=75)
+    # ⭐️ 평점 슬라이더를 5점 만점으로 변경
+    min_rating_5_star = st.slider("최소 평점 (5점 만점)", min_value=0.0, max_value=5.0, value=3.5, step=0.5)
 
     st.markdown("---")
     search_button = st.button("검색 시작")
@@ -106,8 +105,9 @@ with col_main:
                 mode_filter = " | ".join([f'game_modes.name = "{m}"' for m in selected_modes])
                 filters.append(f'where ({mode_filter})')
             
-            if min_rating > 0:
-                filters.append(f'where rating > {min_rating}')
+            # ⭐️ 5점 만점 평점을 100점 만점으로 변환하여 쿼리에 적용
+            min_rating_100_point = min_rating_5_star * 20
+            filters.append(f'where rating > {min_rating_100_point}')
 
             query_body = f'fields name, genres.name, summary, rating, cover.url, game_modes.name; {" & ".join(filters)}; limit 10;'
 
@@ -123,8 +123,6 @@ with col_main:
                             col1, col2 = st.columns([1, 4])
                             with col1:
                                 if game.get("cover") and game["cover"].get("url"):
-                                    # RAWG와 IGDB는 이미지 URL 형식이 다름.
-                                    # IGDB는 '//'로 시작하므로 'https:'를 추가해야 함.
                                     image_url = f"https:{game['cover']['url']}"
                                     st.image(image_url, width=100)
                                 else:
@@ -143,10 +141,12 @@ with col_main:
                                     mode_names = [m.get('name') for m in modes]
                                     st.write(f"**플레이어 모드:** {', '.join(mode_names)}")
                                 
-                                rating = game.get('rating')
-                                if rating:
-                                    stars = int(round(rating / 20))
-                                    st.write(f"**평점:** {'⭐' * stars} ({rating:.1f}/100점)")
+                                rating_100_point = game.get('rating')
+                                if rating_100_point:
+                                    # ⭐️ 100점 만점 평점을 5점 만점으로 변환하여 표시
+                                    rating_5_star = round(rating_100_point / 20, 1)
+                                    stars = int(round(rating_5_star))
+                                    st.write(f"**평점:** {'⭐' * stars} ({rating_5_star:.1f}/5점)")
                                 else:
                                     st.write(f"**평점:** 정보 없음")
 
