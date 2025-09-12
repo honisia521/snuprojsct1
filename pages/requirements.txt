@@ -7,3 +7,6 @@ pandas
 streamlit
 requests
 googletrans
+streamlit
+requests
+googletrans
