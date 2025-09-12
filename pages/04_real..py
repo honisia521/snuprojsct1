@@ -103,4 +103,9 @@ if st.button("검색"):
 
                         st.markdown("---")
             else:
-                st.info("
+                st.info("검색 결과가 없습니다.")
+        
+        except requests.exceptions.RequestException as e:
+            st.error(f"API 요청 중 오류가 발생했습니다: {e}")
+    else:
+        st.warning("검색할 게임 이름을 입력하거나, 장르와 별점 필터를 사용해 주세요.")
