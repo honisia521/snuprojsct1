@@ -4,3 +4,6 @@ pandas
 streamlit
 openai>=1.0.0
 pandas
+streamlit
+requests
+googletrans
