@@ -55,6 +55,13 @@ access_token = get_access_token()
 if access_token:
     user_query = st.text_input("찾고 싶은 게임 이름을 입력하세요:", placeholder="예: GTA V 또는 스타듀 밸리")
 
+    # ⭐️ 장르 선택 드롭다운 메뉴 추가
+    GENRES = [
+        "Action", "Adventure", "Role-playing (RPG)", "Strategy", "Simulation", "Sports", 
+        "Puzzle", "Shooter", "Fighting", "Racing"
+    ]
+    selected_genres = st.multiselect("원하는 장르를 선택하세요:", GENRES)
+
     if user_query:
         # 사용자가 입력한 내용을 영어로 번역
         english_query = translate_to_english(user_query)
@@ -67,8 +74,18 @@ if access_token:
             "Client-ID": client_id,
             "Authorization": f"Bearer {access_token}"
         }
-
-        query_body = f'fields name, genres.name, summary, rating, cover.url; search "{english_query}"; limit 10;'
+        
+        # ⭐️ 장르 필터링 쿼리 생성
+        genre_filter = ""
+        if selected_genres:
+            genre_list = [f'genres.name = "{g}"' for g in selected_genres]
+            genre_filter = " & ".join(genre_list)
+            
+        # 최종 쿼리 바디
+        if genre_filter:
+            query_body = f'fields name, genres.name, summary, rating, cover.url; search "{english_query}"; where ({genre_filter}); limit 10;'
+        else:
+            query_body = f'fields name, genres.name, summary, rating, cover.url; search "{english_query}"; limit 10;'
 
         try:
             igdb_response = requests.post(igdb_url, headers=headers, data=query_body)
