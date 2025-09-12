@@ -8,14 +8,12 @@ import asyncio
 rawg_api_key = st.secrets["rawg_api_key"]
 
 # 번역기 객체를 만듭니다.
-# 'async'를 지원하는 새 번역기 객체를 사용합니다.
 translator = Translator()
 
 async def translate_korean_to_english_async(text):
     """비동기 방식으로 한국어를 영어로 번역하는 함수"""
     try:
         if any('\uac00' <= char <= '\ud7a3' for char in text):
-            # await를 사용해 번역이 끝날 때까지 기다립니다.
             result = await asyncio.to_thread(translator.translate, text, dest='en')
             return result.text
     except Exception as e:
@@ -30,7 +28,6 @@ def translate_korean_to_english(text):
 st.title("🎮 RAWG 게임 검색기")
 st.markdown("궁금한 게임의 이름을 입력하거나, 옆의 필터들을 사용해 보세요.")
 
-# --- UI 섹션 ---
 col1, col2 = st.columns([1, 1])
 
 with col1:
@@ -49,10 +46,13 @@ with col2:
     }
     selected_genre_korean = st.selectbox("장르", ["선택 안 함"] + list(genre_list.keys()))
     
+# --- 이 부분의 안내 문구가 수정되었습니다! ---
 game_name = st.text_input("게임 이름 검색 (한글/영어)", placeholder="예: GTA V 또는 그랜드")
+st.caption("🚨 한글 검색 시 번역 오류로 인해 정확한 결과가 나오지 않을 수 있습니다.")
+# --- 수정 끝 ---
+
 min_rating = st.slider("최소 별점", min_value=0.0, max_value=5.0, value=0.0, step=0.1)
 
-# --- API 요청 및 데이터 표시 섹션 ---
 base_url = f"https://api.rawg.io/api/games?key={rawg_api_key}"
 params = {}
 
