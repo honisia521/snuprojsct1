@@ -5,7 +5,6 @@ from googletrans import Translator
 import asyncio
 
 # --- 1. RAWG API 키 불러오기 ---
-# secrets.toml 파일에서 RAWG API 키를 불러옵니다.
 rawg_api_key = st.secrets["rawg_api_key"]
 
 # --- 2. 비동기 번역 함수 ---
@@ -43,11 +42,9 @@ with col_sidebar:
     st.header("🎯 게임 필터링")
     st.markdown("---")
 
-    # 검색 텍스트 입력창
     game_name = st.text_input("게임 이름 검색 (한글/영어)", placeholder="예: GTA V 또는 그랜드")
     st.caption("🚨 한글 검색 시 번역 오류로 인해 정확한 결과가 나오지 않을 수 있습니다.")
 
-    # 플레이어 수 선택
     player_tags = {
         "모두": "",
         "싱글플레이": "singleplayer",
@@ -55,7 +52,6 @@ with col_sidebar:
     }
     selected_player_korean = st.selectbox("플레이어 수", list(player_tags.keys()))
 
-    # 장르 선택
     genre_list = {
         "액션": "action", "인디": "indie", "어드벤처": "adventure", "RPG": "role-playing-games-rpg",
         "전략": "strategy", "슈팅": "shooter", "캐주얼": "casual", "시뮬레이션": "simulation",
@@ -63,7 +59,6 @@ with col_sidebar:
     }
     selected_genre_korean = st.selectbox("장르", ["선택 안 함"] + list(genre_list.keys()))
     
-    # 최소 별점 슬라이더
     min_rating = st.slider("최소 별점", min_value=0.0, max_value=5.0, value=0.0, step=0.1)
 
     st.markdown("---")
@@ -73,7 +68,6 @@ with col_sidebar:
 with col_main:
     st.header("✨ 검색 결과")
     
-    # 검색 버튼이 눌렸을 때만 API 호출
     if search_button:
         base_url = f"https://api.rawg.io/api/games?key={rawg_api_key}"
         params = {}
@@ -131,7 +125,7 @@ with col_main:
 
                             st.markdown("---")
                 else:
-                    st.info("검색 결과가 없습니다. 다른 필터를 사용해보세요.")
+                    st.info("검색 결과가 없습니다. 게임명을 더 구체적으로 입력하거나, 다른 필터를 사용해보세요.")
             
             except requests.exceptions.RequestException as e:
                 st.error(f"API 요청 중 오류가 발생했습니다: {e}")
