@@ -22,12 +22,9 @@ def translate_korean_to_english(text):
 st.title("🎮 RAWG 게임 검색기")
 st.markdown("궁금한 게임의 이름을 입력하거나, 옆의 필터들을 사용해 보세요.")
 
-# --- 기존 사이드바를 없애고, 두 개의 열로 나눕니다. ---
-# 필터들을 오른쪽 열에 배치하기 위해 st.columns를 사용합니다.
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    # 플레이어 수 드롭다운 메뉴 (태그 활용)
     player_tags = {
         "모두": "",
         "싱글플레이": "singleplayer",
@@ -36,7 +33,6 @@ with col1:
     selected_player_korean = st.selectbox("플레이어 수", list(player_tags.keys()))
 
 with col2:
-    # 장르 드롭다운 메뉴
     genre_list = {
         "액션": "action", "인디": "indie", "어드벤처": "adventure", "RPG": "role-playing-games-rpg",
         "전략": "strategy", "슈팅": "shooter", "캐주얼": "casual", "시뮬레이션": "simulation",
@@ -44,13 +40,12 @@ with col2:
     }
     selected_genre_korean = st.selectbox("장르", ["선택 안 함"] + list(genre_list.keys()))
     
-# 메인 화면에 검색창과 별점 슬라이더를 배치합니다.
 game_name = st.text_input("게임 이름 검색 (한글/영어)", placeholder="예: GTA V 또는 그랜드")
-min_rating = st.slider("최소 별점", min_value=0.0, max_value=5.0, value=0.0, step=0.5)
 
-# --- UI 변경 끝 ---
+# --- 이 부분이 수정되었습니다! ---
+min_rating = st.slider("최소 별점", min_value=0.0, max_value=5.0, value=0.0, step=0.1) # step=0.1로 변경
+# --- 수정 끝 ---
 
-# API 요청 URL을 초기화합니다.
 base_url = f"https://api.rawg.io/api/games?key={rawg_api_key}"
 params = {}
 
@@ -108,9 +103,4 @@ if st.button("검색"):
 
                         st.markdown("---")
             else:
-                st.info("검색 결과가 없습니다.")
-        
-        except requests.exceptions.RequestException as e:
-            st.error(f"API 요청 중 오류가 발생했습니다: {e}")
-    else:
-        st.warning("검색할 게임 이름을 입력하거나, 장르와 별점 필터를 사용해 주세요.")
+                st.info("
